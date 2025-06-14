@@ -81,7 +81,7 @@ def main():
     final_clip = clip.set_audio(audio_clip)
     
     # Write the final video
-    final_clip.write_videofile("bug_animation.mp4", fps=FPS)
+    final_clip.write_videofile("bug_animation.mp4", fps=FPS, codec='libx264', audio_codec='aac')
     
     # Clean up temporary audio file
     os.remove(temp_audio_file)
