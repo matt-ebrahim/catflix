@@ -10,18 +10,58 @@ DURATION = 10  # seconds
 FPS = 24
 
 def generate_bug_sound(duration, sample_rate=44100):
-    """Generate a buzzing sound for the bug"""
+    """Generate a more realistic buzzing sound for the bug"""
     t = np.linspace(0, duration, int(sample_rate * duration))
-    # Create a buzzing sound using multiple sine waves
-    frequency = 200 + 50 * np.sin(2 * np.pi * 2 * t)  # Varying frequency
-    signal = 0.5 * np.sin(2 * np.pi * frequency * t)
-    # Add some noise
-    signal += 0.1 * np.random.randn(len(t))
+    
+    # Create multiple frequency components for a more complex sound
+    base_freq = 200  # Base frequency
+    freq_variation = 50 * np.sin(2 * np.pi * 2 * t)  # Varying frequency
+    harmonics = [
+        0.5 * np.sin(2 * np.pi * (base_freq + freq_variation) * t),  # Main tone
+        0.3 * np.sin(2 * np.pi * (base_freq * 1.5 + freq_variation) * t),  # First harmonic
+        0.2 * np.sin(2 * np.pi * (base_freq * 2 + freq_variation) * t),  # Second harmonic
+    ]
+    
+    # Combine all components
+    signal = sum(harmonics)
+    
+    # Add some noise for texture
+    noise = 0.1 * np.random.randn(len(t))
+    signal += noise
+    
+    # Add amplitude modulation for wing beat effect
+    wing_beat = 0.3 * np.sin(2 * np.pi * 100 * t)  # 100 Hz wing beat
+    signal *= (1 + wing_beat)
+    
     # Normalize
     signal = signal / np.max(np.abs(signal))
+    
     # Convert to 16-bit PCM
     signal = (signal * 32767).astype(np.int16)
     return signal, sample_rate
+
+def create_natural_background():
+    """Create a natural-looking background with texture"""
+    # Create base background (light green for grass-like appearance)
+    background = np.ones((HEIGHT, WIDTH, 3), dtype=np.uint8)
+    background[:, :, 0] = 200  # Red channel
+    background[:, :, 1] = 230  # Green channel
+    background[:, :, 2] = 180  # Blue channel
+    
+    # Add some texture
+    noise = np.random.randint(0, 30, (HEIGHT, WIDTH, 3), dtype=np.uint8)
+    background = np.clip(background - noise, 0, 255).astype(np.uint8)
+    
+    # Add some darker spots for variety
+    for _ in range(50):
+        x = random.randint(0, WIDTH-1)
+        y = random.randint(0, HEIGHT-1)
+        size = random.randint(5, 15)
+        background[max(0, y-size):min(HEIGHT, y+size), 
+                  max(0, x-size):min(WIDTH, x+size)] = background[max(0, y-size):min(HEIGHT, y+size), 
+                                                                 max(0, x-size):min(WIDTH, x+size)] * 0.8
+    
+    return background
 
 def make_path(duration, fps=FPS):
     """Generate a more natural bug-like path"""
@@ -52,23 +92,35 @@ def make_path(duration, fps=FPS):
 def make_frame(t):
     """Create a single frame of the animation"""
     idx = int(t * FPS)
-    frame = np.ones((HEIGHT, WIDTH, 3), dtype=np.uint8) * 255
+    frame = background.copy()  # Use the natural background
     
     if idx < len(path):
         x, y = path[idx]
         # Convert coordinates to integers
         x, y = int(x), int(y)
-        # Draw a more detailed bug (small black dot with wings)
-        # Body
-        frame[y-2:y+2, x-2:x+2] = [0, 0, 0]
-        # Wings
-        frame[y-3:y+3, x-4:x+4] = [50, 50, 50]
+        
+        # Draw a more detailed bug
+        # Body (dark brown)
+        frame[y-2:y+2, x-2:x+2] = [40, 20, 10]
+        
+        # Wings (semi-transparent)
+        wing_color = np.array([100, 100, 100, 128], dtype=np.uint8)
+        # Left wing
+        frame[y-3:y+3, x-4:x] = np.clip(frame[y-3:y+3, x-4:x] * 0.7, 0, 255)
+        # Right wing
+        frame[y-3:y+3, x:x+4] = np.clip(frame[y-3:y+3, x:x+4] * 0.7, 0, 255)
+        
+        # Add a small shadow under the bug
+        shadow = np.zeros((4, 4, 3), dtype=np.uint8)
+        shadow[:, :] = [20, 20, 20]
+        frame[y+2:y+6, x-2:x+2] = np.clip(frame[y+2:y+6, x-2:x+2] * 0.8, 0, 255)
     
     return frame
 
 def main():
-    global path
+    global path, background
     path = make_path(DURATION)
+    background = create_natural_background()
     
     # Create video clip
     clip = VideoClip(make_frame, duration=DURATION)
