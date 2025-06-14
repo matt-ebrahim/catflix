@@ -56,6 +56,8 @@ def make_frame(t):
     
     if idx < len(path):
         x, y = path[idx]
+        # Convert coordinates to integers
+        x, y = int(x), int(y)
         # Draw a more detailed bug (small black dot with wings)
         # Body
         frame[y-2:y+2, x-2:x+2] = [0, 0, 0]
@@ -81,7 +83,7 @@ def main():
     final_clip = clip.set_audio(audio_clip)
     
     # Write the final video
-    final_clip.write_videofile("bug_animation.mp4", fps=FPS, codec='libx264', audio_codec='aac')
+    final_clip.write_videofile("bug_animation.mp4", fps=FPS, codec='libx264', audio_codec='aac', threads=4)
     
     # Clean up temporary audio file
     os.remove(temp_audio_file)
